@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/png" href="assets/images/icon.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Admin Dashboard</title>
+  <link rel="stylesheet" href="vendor/bootstrap/css/bootstrap.min.css">
+  <!-- <link rel="stylesheet" href="assets/css/templatemo-stand-blog.css"> -->
+</head>
+<body>
+  <script>
+    async function verifyAuth() {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        window.location.href = 'login.html';
+        return;
+      }
+
+      try {
+        const response = await fetch('/api/verify-token', {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        if (!response.ok) {
+          localStorage.removeItem('token');
+          window.location.href = '/';
+        }
+      } catch (err) {
+        console.error('Token verification failed:', err);
+        localStorage.removeItem('token');
+        window.location.href = '/';
+      }
+    }
+
+    verifyAuth();
+  </script>
+
+  <nav class="navbar navbar-light bg-light fixed-top justify-content-end px-3">
+    <button id="logoutBtn" class="btn btn-outline-danger">Logout</button>
+  </nav>
+  <section class="page-heading" style="margin-top: 60px;">
+    <div class="container text-center">
+      <div class="text-content mb-4">
+        <h2>Admin Dashboard</h2>
+      </div>
+      <h4>Select a site:</h4>
+      <div class="mt-2">
+        <select id="siteSelect" class="form-select w-auto d-inline-block">
+          <option value="">-- Select Site --</option>
+          <option value="aboutfashions">aboutfashions</option>
+          <option value="genexfinance">genexfinance</option>
+          <option value="thefactfinding">thefactfinding</option>
+          <option value="foodbitez">foodbitez</option>
+        </select>
+      </div>
+
+      <div class="mt-4">
+        <button id="viewBlogsBtn" class="btn btn-primary btn-lg m-2">View All Blogs</button>
+        <a href="admin-add-blog.html" class="btn btn-primary btn-lg m-2">Add New Blog</a>
+        <a href="highlighted-sections.html" class="btn btn-primary btn-lg m-2">Highlighted Sections</a>
+      </div>
+    </div>
+  </section>
+
+  <div class="container mt-5" id="blogList" style="display: none;"></div>
+
+  <!-- Hidden JS Script Form -->
+  <div class="container mt-5" id="scriptFormContainer" style="display: none;">
+    <h4>Add JS Script to Site</h4>
+    <form id="scriptForm">
+      <div class="form-group">
+        <label for="scriptContent">JS Script (without &lt;script&gt; tags):</label>
+        <textarea id="scriptContent" class="form-control" rows="10" required></textarea>
+      </div>
+
+      <div class="form-group">
+        <label for="position">Script Position</label>
+        <select id="position" class="form-control" required>
+          <option value="">-- Select Position --</option>
+          <option value="head">Inside &lt;head&gt; tag</option>
+          <option value="body">Inside &lt;body&gt; tag</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="pin">Enter Security PIN</label>
+        <input id="pin" class="form-control" required />
+      </div>
+
+      <button type="submit" class="btn btn-primary mt-2 mb-2">Add Script</button>
+      <a href="admin-dashboard.html" class="btn btn-primary mt-2 mb-2">Close</a>
+    </form>
+  </div>
+
+
+  <script src="vendor/jquery/jquery.min.js"></script>
+  <script src="vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
+
+  <script>
+  document.getElementById('viewBlogsBtn').addEventListener('click', function () {
+    fetch('/api/post')
+      .then(response => {
+        if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+        return response.json();
+      })
+      .then(data => {
+        renderBlogs(data); // assuming API returns an array of blog posts
+
+        document.getElementById('scriptFormContainer').style.display = 'none';
+      })
+      .catch(err => console.error('Error fetching blogs:', err));
+  });
+
+  function renderBlogs(blogs) {
+    const blogList = document.getElementById('blogList');
+    blogList.style.display = 'block';
+    blogList.innerHTML = ''; // Clear any previous entries
+
+    blogs.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    blogs.forEach(blog => {
+      const blogCard = document.createElement('div');
+      blogCard.className = 'card mb-4';
+
+      blogCard.innerHTML = `
+        <div class="row g-0">
+          <div class="col-md-4">
+            <img src="${blog.image}" class="img-fluid rounded-start" alt="${blog.title}">
+          </div>
+          <div class="col-md-8">
+            <div class="card-body">
+              <h5 class="card-title">${blog.title}</h5>
+              <p class="card-text"><small class="text-muted">Id : ${blog.id} | ${blog.date}</small></p>
+              <p class="card-text">${blog.summary}</p>
+              <button class="btn btn-warning btn-sm me-2" onclick="editBlog(${blog.id})">Edit</button>
+              <button class="btn btn-warning btn-sm" onclick="deleteBlog(${blog.id})">Delete</button>
+            </div>
+          </div>
+        </div>
+      `;
+
+      blogList.appendChild(blogCard);
+    });
+  }
+
+  function editBlog(id) {
+    window.location.href = `admin-edit-blog.html?id=${id}`;
+  }
+
+  function deleteBlog(id) {
+    if (confirm('Are you sure you want to delete this blog?')) {
+      fetch(`/api/post/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      })
+      .then(res => {
+        if (res.ok) {
+          alert('Blog deleted successfully!');
+          document.getElementById('viewBlogsBtn').click(); // Refresh list
+        } else {
+          alert('Failed to delete blog.');
+        }
+      });
+    }
+  }
+
+  // Add JS Script form
+//   document.getElementById('addScriptBtn').addEventListener('click', function () {
+//   const formContainer = document.getElementById('scriptFormContainer');
+//   const blogList = document.getElementById('blogList');
+
+//   blogList.style.display = 'none';
+
+//   // Toggle the form
+//   formContainer.style.display = formContainer.style.display === 'none' ? 'block' : 'none';
+// });
+
+  // Handle JS Script form submission
+  document.getElementById('scriptForm').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    const script = document.getElementById('scriptContent').value;
+    const pin = document.getElementById('pin').value;
+    const position = document.getElementById('position').value;
+
+    const scriptContent = { script, pin, position };
+
+    const response = await fetch('/api/add-script', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      },
+      body: JSON.stringify(scriptContent)
+    });
+
+    const result = await response.json();
+    console.log('result:', result);
+    const msgDiv = document.getElementById('scriptFormMessage');
+
+    if (response.ok) {
+      document.getElementById('successModalBody').textContent = result.message;
+      $('#successModal').modal('show');
+    } else {
+      const errorMessage = result.error || 'Failed to add script.';
+      document.getElementById('errorModalBody').textContent = errorMessage;
+      $('#errorModal').modal('show');
+    }
+  });
+</script>
+
+<script>
+  document.getElementById('logoutBtn').addEventListener('click', async function () {
+    console.log(`logging out with token: ${localStorage.getItem('token')}`);
+    try {
+      const res = await fetch('/api/logout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+
+      if (res.ok) {
+        localStorage.removeItem('token');
+        window.location.href = '/';
+      } else {
+        localStorage.removeItem('token');
+        window.location.href = '/';
+      }
+    } catch (err) {
+      console.error('Logout error:', err);
+      alert('Something went wrong.');
+    }
+  });
+</script>
+
+<!-- Error Message Modal -->
+<div class="modal fade" id="errorModal" tabindex="-1" role="dialog" aria-labelledby="errorModalLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header bg-danger text-white">
+        <h5 class="modal-title" id="errorModalLabel">Error</h5>
+        <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body" id="errorModalBody">
+        <!-- message will go here -->
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Success Modal -->
+<div class="modal fade" id="successModal" tabindex="-1" role="dialog" aria-labelledby="successModalLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header bg-success text-white">
+        <h5 class="modal-title" id="successModalLabel">Success</h5>
+        <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body" id="successModalBody">
+        <!-- Success message will go here -->
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // --- Handle site selection and save to cookies ---
+  const siteSelect = document.getElementById('siteSelect');
+  
+  // Restore previous selection from cookies (if exists)
+  document.addEventListener('DOMContentLoaded', () => {
+    const savedSite = getCookie('selectedSite');
+    if (savedSite) {
+      siteSelect.value = savedSite;
+    }
+  });
+
+  // When site changes, store in cookie
+  siteSelect.addEventListener('change', () => {
+    const selected = siteSelect.value;
+    if (selected) {
+      document.cookie = `selectedSite=${selected}; path=/; max-age=${60 * 60 * 24 * 7}`; // 7 days
+      alert(`Selected site: ${selected}`);
+    }
+  });
+
+  // Helper: Get cookie by name
+  function getCookie(name) {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop().split(';').shift();
+  }
+
+  // --- Intercept fetch to always include selected site cookie ---
+  // const originalFetch = window.fetch;
+  // window.fetch = async (...args) => {
+  //   const [resource, config = {}] = args;
+  //   const selectedSite = getCookie('selectedSite');
+  //   config.headers = config.headers || {};
+  //   if (selectedSite) {
+  //     config.headers['x-selected-site'] = selectedSite; // custom header for backend
+  //   }
+  //   return originalFetch(resource, config);
+  // };
+</script>
+
+
+</body>
+</html>

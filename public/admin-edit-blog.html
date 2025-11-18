@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/png" href="assets/images/icon.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Edit Blog</title>
+  <link rel="stylesheet" href="vendor/bootstrap/css/bootstrap.min.css">
+</head>
+<body>
+  <div class="container mt-5">
+    <h2>Edit Blog</h2>
+    <form id="editBlogForm">
+      <input type="hidden" id="blogId" />
+
+      <div class="mb-3">
+        <label for="title" class="form-label">Title</label>
+        <input type="text" class="form-control" id="title" required />
+      </div>
+
+      <div class="mb-3">
+        <label for="image" class="form-label">Image URL</label>
+        <input type="text" class="form-control" id="image" required />
+      </div>
+
+      <div class="mb-3">
+        <label for="summary" class="form-label">Summary</label>
+        <textarea class="form-control" id="summary" rows="3" required></textarea>
+      </div>
+
+      <div class="mb-3">
+        <label for="content" class="form-label">Content</label>
+        <!-- TinyMCE Editor -->
+        <textarea id="editor"></textarea>
+      </div>
+
+      <div class="mb-3">
+        <label for="categorySelector">Select Category</label>
+        <select id="categorySelector" class="form-control" required>
+          <option value="">-- Select category --</option>
+        </select>
+      </div>
+
+      <button type="submit" class="btn btn-primary">Save Changes</button>
+      <a href="admin-dashboard.html" class="btn btn-secondary">Cancel</a>
+    </form>
+  </div>
+
+  <!-- TinyMCE -->
+  <script src="https://cdn.tiny.cloud/1/0cs91s6vtnabifnqn7entz26k8icrwh6ke0ucut7a9r75n9h/tinymce/7/tinymce.min.js" referrerpolicy="origin"></script>
+  <script>
+    let blogContent = '';
+    tinymce.init({
+      selector: '#editor',
+      plugins: 'link lists',
+      toolbar: 'bold italic underline bullist numlist link',
+      menubar: false,
+      height: 300,
+      setup: function (editor) {
+        editor.on('init', function () {
+          if (blogContent) {
+            editor.setContent(blogContent);
+          }
+        });
+      }
+    });
+  </script>
+
+  <script>
+    // Define categories per site
+    const siteCategories = {
+      aboutfashions: [
+        "Fashion Trends",
+        "Style Tips",
+        "Beauty & Makeup",
+        "Shopping"
+      ],
+      genexfinance: [
+        "Financial Planning",
+        "Investment",
+        "Banking",
+        "Insurance"
+      ],
+      foodbitez: [
+        "Nutrition Basics",
+        "Food & Health",
+        "Special Diets"
+      ],
+      thefactfinding: [
+        "History & Culture",
+        "Science & Technology",
+        "Bizzare & Unexplained",
+        "Human Psychology"
+      ]
+    };
+
+    const categorySelector = document.getElementById('categorySelector');
+
+    // Function to read cookie by name
+    function getCookie(name) {
+      const value = `; ${document.cookie}`;
+      const parts = value.split(`; ${name}=`);
+      if (parts.length === 2) return parts.pop().split(';').shift();
+    }
+
+    // Get selected site from cookie
+    const selectedSite = getCookie('selectedSite');
+
+    if (!selectedSite) {
+      alert('No site selected. Please select a site first.');
+      window.location.href = 'admin-dashboard.html';
+    } else {
+      // Fill categories based on cookie value
+      const categories = siteCategories[selectedSite];
+      if (categories) {
+        categorySelector.innerHTML = '<option value="">-- Select category --</option>';
+        categories.forEach(category => {
+          const option = document.createElement('option');
+          option.value = category;
+          option.textContent = category;
+          categorySelector.appendChild(option);
+        });
+      } else {
+        alert(`No categories defined for site: ${selectedSite}`);
+      }
+    }
+  </script>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const blogId = params.get('id');
+    let blog;
+
+    fetch(`/api/post/${blogId}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+      })
+      .then(res => res.json())
+      .then(data => {
+        blog = data.post;
+        if (!blog) {
+          alert('Blog not found.');
+          return;
+        }
+
+        document.getElementById('blogId').value = blog.id;
+        document.getElementById('title').value = blog.title;
+        document.getElementById('image').value = blog.image;
+        document.getElementById('summary').value = blog.summary;
+
+        console.log(blog)
+
+        // Pre-select the category
+        const blogCategory = blog.category || '';
+        document.getElementById("categorySelector").value = blogCategory;
+
+        blogContent = blog.content || '';
+      });
+
+    // Form submission
+    document.getElementById('editBlogForm').addEventListener('submit', async function (e) {
+      e.preventDefault();
+
+      const selectedCategory = document.getElementById("categorySelector").value;
+
+      let content = tinymce.get('editor').getContent();
+      content = content
+        .replace(/<p[^>]*>/gi, '')
+        .replace(/<\/p>/gi, '<br>')
+        .replace(/<span[^>]*>/gi, '')
+        .replace(/<\/span>/gi, '');
+
+      const updatedBlog = {
+        id: parseInt(document.getElementById('blogId').value),
+        title: document.getElementById('title').value,
+        image: document.getElementById('image').value,
+        summary: document.getElementById('summary').value,
+        content,
+        category: selectedCategory,
+        date: blog.date
+      };
+
+      const response = await fetch(`/api/post/${updatedBlog.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify(updatedBlog),
+      });
+
+      if (response.ok) {
+        alert('Blog updated successfully!');
+        window.location.href = 'admin-dashboard.html';
+      } else {
+        alert('Error updating blog.');
+      }
+    });
+  </script>
+
+</body>
+</html>
