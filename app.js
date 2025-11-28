@@ -78,10 +78,14 @@ app.post('/api/logout', checkAuth, (req, res) => {
   res.json({ message: 'Logged out successfully' });
 });
 
+function isTokenBlacklisted(token) {
+  return tokenBlacklist.has(token);
+}
+
 app.post('/api/post', upload.any(), async (req, res) => {
   try {
     const site = req.cookies.selectedSite;
-    const authHeader = request.headers.authorization;
+    const authHeader = req.headers.authorization;
     const filesBase64 = {};
 
     // Convert uploaded files to base64
@@ -212,6 +216,8 @@ app.delete('/api/post/:id', checkAuth, async(req, res) => {
 
     if (response.ok) {
       res.json({status: 'success' });
+    } else  {
+      res.status(500).json({ message: 'Failed to delete post'});
     }
   } catch (err) {
     console.log(err);

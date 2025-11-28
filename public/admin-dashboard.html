@@ -68,35 +68,6 @@
 
   <div class="container mt-5" id="blogList" style="display: none;"></div>
 
-  <!-- Hidden JS Script Form -->
-  <div class="container mt-5" id="scriptFormContainer" style="display: none;">
-    <h4>Add JS Script to Site</h4>
-    <form id="scriptForm">
-      <div class="form-group">
-        <label for="scriptContent">JS Script (without &lt;script&gt; tags):</label>
-        <textarea id="scriptContent" class="form-control" rows="10" required></textarea>
-      </div>
-
-      <div class="form-group">
-        <label for="position">Script Position</label>
-        <select id="position" class="form-control" required>
-          <option value="">-- Select Position --</option>
-          <option value="head">Inside &lt;head&gt; tag</option>
-          <option value="body">Inside &lt;body&gt; tag</option>
-        </select>
-      </div>
-
-      <div class="form-group">
-        <label for="pin">Enter Security PIN</label>
-        <input id="pin" class="form-control" required />
-      </div>
-
-      <button type="submit" class="btn btn-primary mt-2 mb-2">Add Script</button>
-      <a href="admin-dashboard.html" class="btn btn-primary mt-2 mb-2">Close</a>
-    </form>
-  </div>
-
-
   <script src="vendor/jquery/jquery.min.js"></script>
   <script src="vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
 
@@ -108,7 +79,7 @@
         return response.json();
       })
       .then(data => {
-        renderBlogs(data); // assuming API returns an array of blog posts
+        renderBlogs(data);
 
         document.getElementById('scriptFormContainer').style.display = 'none';
       })
@@ -170,49 +141,6 @@
       });
     }
   }
-
-  // Add JS Script form
-//   document.getElementById('addScriptBtn').addEventListener('click', function () {
-//   const formContainer = document.getElementById('scriptFormContainer');
-//   const blogList = document.getElementById('blogList');
-
-//   blogList.style.display = 'none';
-
-//   // Toggle the form
-//   formContainer.style.display = formContainer.style.display === 'none' ? 'block' : 'none';
-// });
-
-  // Handle JS Script form submission
-  document.getElementById('scriptForm').addEventListener('submit', async function (e) {
-    e.preventDefault();
-    const script = document.getElementById('scriptContent').value;
-    const pin = document.getElementById('pin').value;
-    const position = document.getElementById('position').value;
-
-    const scriptContent = { script, pin, position };
-
-    const response = await fetch('/api/add-script', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('token')}`
-      },
-      body: JSON.stringify(scriptContent)
-    });
-
-    const result = await response.json();
-    console.log('result:', result);
-    const msgDiv = document.getElementById('scriptFormMessage');
-
-    if (response.ok) {
-      document.getElementById('successModalBody').textContent = result.message;
-      $('#successModal').modal('show');
-    } else {
-      const errorMessage = result.error || 'Failed to add script.';
-      document.getElementById('errorModalBody').textContent = errorMessage;
-      $('#errorModal').modal('show');
-    }
-  });
 </script>
 
 <script>
@@ -303,19 +231,7 @@
     if (parts.length === 2) return parts.pop().split(';').shift();
   }
 
-  // --- Intercept fetch to always include selected site cookie ---
-  // const originalFetch = window.fetch;
-  // window.fetch = async (...args) => {
-  //   const [resource, config = {}] = args;
-  //   const selectedSite = getCookie('selectedSite');
-  //   config.headers = config.headers || {};
-  //   if (selectedSite) {
-  //     config.headers['x-selected-site'] = selectedSite; // custom header for backend
-  //   }
-  //   return originalFetch(resource, config);
-  // };
 </script>
-
 
 </body>
 </html>
