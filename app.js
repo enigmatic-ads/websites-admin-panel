@@ -112,7 +112,9 @@ app.post('/api/post', upload.any(), async (req, res) => {
       images: filesBase64
     };
 
-    const response = await fetch(`https://${site}.com/api/admin-panel/post`, {
+    const siteBaseUrl = getSiteBaseURL(req);
+
+    const response = await fetch(`${siteBaseUrl}/api/admin-panel/post`, {
       method: 'POST',
       headers: {
         'Authorization': authHeader,
@@ -133,9 +135,10 @@ app.get('/api/post/:id', checkAuth, async(req, res) => {
   try {
     const postId = req.params.id;
     const authHeader = req.headers.authorization;
-    const site = req.cookies.selectedSite;
 
-    const response = await fetch(`https://${site}.com/api/post/${postId}`, {
+    const siteBaseUrl = getSiteBaseURL(req);
+
+    const response = await fetch(`${siteBaseUrl}/api/post/${postId}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -158,13 +161,13 @@ app.get('/api/post/:id', checkAuth, async(req, res) => {
 
 app.get('/api/post', async (req, res) => {
   try {
-    const site = req.cookies.selectedSite;
+    const siteBaseUrl = getSiteBaseURL(req);
 
-    const response = await fetch(`https://${site}.com/posts`);
+    const response = await fetch(`${siteBaseUrl}/posts`);
     let data = await response.json();
 
     data.map(post => {
-      post.image = `https://${site}.com/${post.image}`;
+      post.image = `${siteBaseUrl}/${post.image}`;
     });
 
     res.json(data);
@@ -177,10 +180,11 @@ app.get('/api/post', async (req, res) => {
 app.put('/api/post/:id', checkAuth, async(req, res) => {
   try {
     const postId = req.params.id;
-    const site = req.cookies.selectedSite;
     const authHeader = req.headers.authorization;
 
-    const response = await fetch(`https://${site}.com/api/blogs/${postId}`, {
+    const siteBaseUrl = getSiteBaseURL(req);
+
+    const response = await fetch(`${siteBaseUrl}/api/blogs/${postId}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -202,10 +206,11 @@ app.delete('/api/post/:id', checkAuth, async(req, res) => {
 
   try {
     const postId = req.params.id;
-    const site = req.cookies.selectedSite;
     const authHeader = req.headers.authorization;
 
-    const response = await fetch(`https://${site}.com/api/blogs/${postId}`, {
+    const siteBaseUrl = getSiteBaseURL(req);
+
+    const response = await fetch(`${siteBaseUrl}/api/blogs/${postId}`, {
       method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
@@ -228,23 +233,24 @@ app.delete('/api/post/:id', checkAuth, async(req, res) => {
 
 app.get("/api/highlighted-sections", async (req, res) => {
   try {
-    const site = req.cookies.selectedSite;
+    const siteBaseUrl = getSiteBaseURL(req);
 
-    const response = await fetch(`https://${site}.com/api/highlighted-sections`);
+    const response = await fetch(`${siteBaseUrl}/api/highlighted-sections`);
     const highlightedPosts = await response.json();
 
     return res.json(highlightedPosts);
   } catch(err) {
+    console.log(err);
     res.status(500).json({ error: 'Failed to fetch highlighted sections.' });
   }
 });
 
 app.post("/api/highlighted-sections", checkAuth, async (req, res) => {
   try {
-    const site = req.cookies.selectedSite;
     const authHeader = req.headers.authorization;
+    const siteBaseUrl = getSiteBaseURL(req);
 
-    const response = await fetch(`https://${site}.com/api/highlighted-sections`, {
+    const response = await fetch(`${siteBaseUrl}/api/highlighted-sections`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -263,6 +269,17 @@ app.post("/api/highlighted-sections", checkAuth, async (req, res) => {
     res.status(500).json({ error: 'Failed to update highlighted sections' });
   }
 });
+
+function getSiteBaseURL(req) {
+    const useLocal = process.env.USE_SITE_LOCALHOST === "true";
+
+    if (useLocal) {
+        return process.env.LOCALHOST_URL;
+    }
+
+    const site = req.cookies.selectedSite;
+    return `https://${site}.com`;
+};
 
 app.get('/api/verify-token', checkAuth, (req, res) => {
   res.sendStatus(200);

@@ -29,30 +29,160 @@
 <body>
   <div class="container mt-5">
     <h2>Manage Highlighted Sections</h2>
-    <p class="text-muted">Click post IDs to select/unselect.</p>
-
+    <p class="text-muted">Click post IDs to select/unselect. Select exactly the required number of posts for each section.
+    </p>
+  
     <form id="highlightForm">
-      <div class="mb-4">
-        <h4>Top Stories (4)</h4>
-        <div id="topStoriesTiles" class="tile-container"></div>
+      <!-- Dynamic sections will be populated here by JavaScript -->
+      <div id="dynamicSectionsContainer"></div>
+  
+      <div class="mt-4">
+        <button type="submit" class="btn btn-primary">Save Changes</button>
+        <a href="admin-dashboard.html" class="btn btn-secondary">Cancel</a>
       </div>
-
-      <div class="mb-4">
-        <h4>Most Popular (4)</h4>
-        <div id="mostPopularTiles" class="tile-container"></div>
-      </div>
-
-      <div class="mb-4">
-        <h4>In Focus (5)</h4>
-        <div id="inFocusTiles" class="tile-container"></div>
-      </div>
-
-      <button type="submit" class="btn btn-primary">Save Changes</button>
-      <a href="admin-dashboard.html" class="btn btn-secondary">Cancel</a>
     </form>
   </div>
 
   <script>
+  async function loadData() {
+    // Load all posts
+    const postsRes = await fetch('/api/post');
+    const posts = await postsRes.json();
+
+    // Load highlighted sections dynamically
+    const highlightRes = await fetch('/api/highlighted-sections', {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      }
+    });
+
+    let highlighted = {};
+    if (highlightRes.ok) {
+      const data = await highlightRes.json();
+      if (data) highlighted = data;
+      console.log(data)
+    }
+
+    // Convert highlighted data into sections dynamically
+    // Every key becomes a section with id, max num, and selected ids
+    const sections = Object.keys(highlighted).map(key => ({
+      id: key + 'Tiles',             // Append 'Tiles' to match container ids
+      max: highlighted[key].length, // Max selections as length of array
+      selectedIds: highlighted[key].map(Number)
+    }));
+
+    console.log(sections)
+
+    renderTiles(posts, sections);
+
+    // Store sections globally for submit handler
+    window.currentSections = sections;
+  }
+
+  function renderTiles(posts, sections) {
+    const container = document.getElementById('dynamicSectionsContainer');
+    container.innerHTML = ''; // Clear previous content
+
+    sections.forEach(section => {
+      // Create section header
+      const sectionDiv = document.createElement('div');
+      sectionDiv.className = 'mb-4';
+      
+      const title = section.id.replace('Tiles', '').replace(/([A-Z])/g, ' $1').trim();
+      sectionDiv.innerHTML = `
+        <h4>${title} (${section.max})</h4>
+      `;
+
+      // Create tiles container
+      const tilesContainer = document.createElement('div');
+      tilesContainer.id = section.id;
+      tilesContainer.className = 'tile-container';
+
+      // Populate tiles
+      posts.forEach(post => {
+        const tile = document.createElement('div');
+        tile.classList.add('post-tile');
+        tile.textContent = post.id;
+        tile.dataset.id = post.id;
+
+        if (section.selectedIds.includes(Number(post.id))) {
+          tile.classList.add('selected');
+        }
+
+        tilesContainer.appendChild(tile);
+      });
+
+      sectionDiv.appendChild(tilesContainer);
+      container.appendChild(sectionDiv);
+
+      setupTileSelection(section.id, section.max);
+    });
+  }
+
+  function setupTileSelection(containerId, maxSelection) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    container.addEventListener('click', (e) => {
+      if (!e.target.classList.contains('post-tile')) return;
+
+      if (e.target.classList.contains('selected')) {
+        e.target.classList.remove('selected');
+      } else {
+        const selected = container.querySelectorAll('.post-tile.selected').length;
+        if (selected < maxSelection) {
+          e.target.classList.add('selected');
+        } else {
+          alert(`You can select only ${maxSelection} posts for this section.`);
+        }
+      }
+    });
+  }
+
+  document.getElementById('highlightForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    // Use dynamic currentSections to build payload
+    const payload = {};
+
+    // Loop through currentSections to get selected ids per section from DOM
+    window.currentSections.forEach(section => {
+      const selectedIds = Array.from(document.querySelectorAll(`#${section.id} .post-tile.selected`))
+        .map(t => parseInt(t.dataset.id));
+
+      if (selectedIds.length !== section.max) {
+        alert(`Please select exactly ${section.max} posts for section "${section.id.replace('Tiles', '')}".`);
+        throw new Error('Invalid selection count');
+      }
+      // Use section id without 'Tiles' suffix as key (assumes ids ending with 'Tiles')
+      const key = section.id.replace('Tiles', '');
+      payload[key] = selectedIds;
+    });
+
+    const response = await fetch('/api/highlighted-sections', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const result = await response.json();
+    if (result.status === 'success') {
+      alert('Highlighted sections updated successfully!');
+      window.location.href = 'admin-dashboard.html';
+    } else {
+      alert('Failed to update highlighted sections.');
+    }
+  });
+
+  // Kick off the data load when script runs
+  loadData();
+</script>
+
+
+  <!-- <script>
     async function loadData() {
       // Load all posts
       const postsRes = await fetch('/api/post');
@@ -151,6 +281,6 @@
     });
 
     loadData();
-  </script>
+  </script> -->
 </body>
 </html>
