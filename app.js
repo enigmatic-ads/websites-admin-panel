@@ -238,12 +238,49 @@ app.get("/api/highlighted-sections", async (req, res) => {
     const response = await fetch(`${siteBaseUrl}/api/highlighted-sections`);
     const highlightedPosts = await response.json();
 
-    return res.json(highlightedPosts);
+    const highlightedPostsQuantity = getHighlightedPostsQuantity(req.cookies.selectedSite);
+
+    const highlightedData = {
+      highlightedPosts,
+      highlightedPostsQuantity
+    }
+
+    return res.json(highlightedData);
   } catch(err) {
     console.log(err);
     res.status(500).json({ error: 'Failed to fetch highlighted sections.' });
   }
 });
+
+function getHighlightedPostsQuantity(site) {
+  const templateA = ['aboutfashions', 'genexfinance', 'thefactfinding', 'foodbitez', 'kafeyworld'];
+  const templateB = ['homeztravel', 'nurturelifes', 'thetechgadgetz'];
+
+  const configA = {
+    topStories: 4,
+    mostPopular: 4,
+    inFocus: 5,
+  };
+
+  const configB = {
+    topPosts: 4,
+    trendingPosts: 3,
+    latestPosts: 5,
+    whatsNewPosts: 3,
+    gridPosts: 5,
+    bottomPosts: 8,
+  };
+
+  if (templateA.includes(site)) {
+    return configA;
+  }
+
+  if (templateB.includes(site)) {
+    return configB;
+  }
+
+  return null;
+}
 
 app.post("/api/highlighted-sections", checkAuth, async (req, res) => {
   try {
@@ -274,7 +311,17 @@ function getSiteBaseURL(req) {
     const useLocal = process.env.USE_SITE_LOCALHOST === "true";
 
     if (useLocal) {
-        return process.env.LOCALHOST_URL;
+        const siteLocalhost = {
+          aboutfashions: 'http://localhost:4000',
+          foodbitez: 'http://localhost:8000',
+          genexfinance: 'http://localhost:5000',
+          thefactfinding: 'http://localhost:6000',
+          nurturelifes: 'http://localhost:9000',
+          kafeyworld: 'http://localhost:7000',
+          homeztravel: 'http://localhost:10000',
+          thetechgadgetz: 'http://localhost:3001',
+        }
+        return siteLocalhost[req.cookies.selectedSite];
     }
 
     const site = req.cookies.selectedSite;

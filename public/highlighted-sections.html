@@ -57,21 +57,19 @@
     });
 
     let highlighted = {};
+    let data;
     if (highlightRes.ok) {
-      const data = await highlightRes.json();
-      if (data) highlighted = data;
-      console.log(data)
+      data = await highlightRes.json();
+      if (data) highlighted = data.highlightedPosts;
     }
 
     // Convert highlighted data into sections dynamically
     // Every key becomes a section with id, max num, and selected ids
     const sections = Object.keys(highlighted).map(key => ({
       id: key + 'Tiles',             // Append 'Tiles' to match container ids
-      max: highlighted[key].length, // Max selections as length of array
+      max: data.highlightedPostsQuantity[key], // Max selections as length of array
       selectedIds: highlighted[key].map(Number)
     }));
-
-    console.log(sections)
 
     renderTiles(posts, sections);
 
