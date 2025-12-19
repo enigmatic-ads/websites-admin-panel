@@ -163,6 +163,8 @@ app.get('/api/post', async (req, res) => {
   try {
     const siteBaseUrl = getSiteBaseURL(req);
 
+    console.log('siteBaseUrl', siteBaseUrl);
+
     const response = await fetch(`${siteBaseUrl}/posts`);
     let data = await response.json();
 
