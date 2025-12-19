@@ -167,7 +167,7 @@ app.get('/api/post', async (req, res) => {
     let data = await response.json();
 
     data.map(post => {
-      post.image = `${siteBaseUrl}/${post.image}`;
+      post.image = `https://${req.cookies.selectedSite}.com/${post.image}`;
     });
 
     res.json(data);
