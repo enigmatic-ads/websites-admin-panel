@@ -163,8 +163,6 @@ app.get('/api/post', async (req, res) => {
   try {
     const siteBaseUrl = getSiteBaseURL(req);
 
-    console.log('siteBaseUrl', siteBaseUrl);
-
     const response = await fetch(`${siteBaseUrl}/posts`);
     let data = await response.json();
 
@@ -317,7 +315,7 @@ function getSiteBaseURL(req) {
           aboutfashions: 'http://localhost:4000',
           foodbitez: 'http://localhost:8000',
           genexfinance: 'http://localhost:5000',
-          thefactfinding: 'http://localhost:6000',
+          thefactfinding: 'http://localhost:6001',
           nurturelifes: 'http://localhost:9000',
           kafeyworld: 'http://localhost:7000',
           homeztravel: 'http://localhost:10000',
